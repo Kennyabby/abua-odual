@@ -72,10 +72,16 @@ export default function Login() {
       return;
     }
 
-    loginMutation.mutate({
-      username: user.username,
-      password: password,
-    });
+    setCurrentUser(user);
+    if (user.role === "citizen") {
+      setLocation("/citizen");
+    } else {
+      setLocation("/dashboard");
+    }
+    // loginMutation.mutate({
+    //   username: user.username,
+    //   password: password,
+    // });
   };
 
   const selectedUser = MOCK_USERS.find(u => u.id === selectedUserId);
