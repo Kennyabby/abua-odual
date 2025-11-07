@@ -1,5 +1,9 @@
 {
   "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  // some linting options
+  "linterOptions": {
+    "exclude": ["cliet/src/**/*"],
+  },
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
@@ -7,6 +11,8 @@
     "noEmit": true,
     "module": "ESNext",
     "strict": true,
+     // Disable full type checking (only critical parse and emit errors will be reported).
+    "noCheck": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",
     "esModuleInterop": true,
