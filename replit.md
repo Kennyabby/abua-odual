@@ -61,25 +61,24 @@ A comprehensive Internally Generated Revenue (IGR) Payment Portal for Abua/Odual
 
 ## Demo Accounts
 
-### Citizen Account
-- Username: citizen1
-- Password: password123
-- Email: john.okafor@email.com
+Demo accounts are created with **runtime-generated random passwords** when you run the seed script.
 
-### Administrator Account
-- Username: admin1
-- Password: admin123
-- Email: ada.nwosu@abuaodual.gov.ng
+### Getting Credentials
 
-### Finance Officer Account
-- Username: finance1
-- Password: finance123
-- Email: emeka.eze@abuaodual.gov.ng
+Run the seed script to generate demo accounts:
+```bash
+npm run db:seed
+```
 
-### Auditor Account
-- Username: auditor1
-- Password: auditor123
-- Email: ngozi.obi@abuaodual.gov.ng
+The script will output credentials to console. Save them for testing.
+
+### Demo Account Usernames
+- **citizen1** - Citizen portal access (email: john.okafor@email.com)
+- **admin1** - Full admin access (email: ada.nwosu@abuaodual.gov.ng)
+- **finance1** - Finance officer (email: emeka.eze@abuaodual.gov.ng)
+- **auditor1** - Auditor read-only (email: ngozi.obi@abuaodual.gov.ng)
+
+See `DEMO_CREDENTIALS.md` for complete credential workflow.
 
 ## Application Routes
 

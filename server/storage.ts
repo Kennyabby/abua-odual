@@ -96,12 +96,14 @@ export class MemStorage implements IStorage {
   }
 
   private seedMockData() {
-    // Seed users
+    // Seed users with bcrypt-hashed passwords
+    // For dev testing with MemStorage only (production uses PostgreSQL with runtime-generated passwords)
+    // Password is a shared dev secret - change for any real deployment
     const mockUsers: User[] = [
       {
         id: "1",
         username: "citizen1",
-        password: "password123",
+        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
         fullName: "John Okafor",
         email: "john.okafor@email.com",
         phone: "+234 803 123 4567",
@@ -110,7 +112,7 @@ export class MemStorage implements IStorage {
       {
         id: "2",
         username: "admin1",
-        password: "admin123",
+        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
         fullName: "Ada Nwosu",
         email: "ada.nwosu@abuaodual.gov.ng",
         phone: "+234 805 987 6543",
@@ -119,7 +121,7 @@ export class MemStorage implements IStorage {
       {
         id: "3",
         username: "finance1",
-        password: "finance123",
+        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
         fullName: "Emeka Eze",
         email: "emeka.eze@abuaodual.gov.ng",
         phone: "+234 807 234 5678",
@@ -128,7 +130,7 @@ export class MemStorage implements IStorage {
       {
         id: "4",
         username: "auditor1",
-        password: "auditor123",
+        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
         fullName: "Ngozi Obi",
         email: "ngozi.obi@abuaodual.gov.ng",
         phone: "+234 809 876 5432",
@@ -534,7 +536,10 @@ export class MemStorage implements IStorage {
   async createTaxpayer(insertTaxpayer: InsertTaxpayer): Promise<Taxpayer> {
     const id = randomUUID();
     const taxpayer: Taxpayer = { 
-      ...insertTaxpayer, 
+      ...insertTaxpayer,
+      businessName: insertTaxpayer.businessName ?? null,
+      businessType: insertTaxpayer.businessType ?? null,
+      registrationNumber: insertTaxpayer.registrationNumber ?? null,
       id,
       createdAt: new Date()
     };
@@ -567,7 +572,11 @@ export class MemStorage implements IStorage {
 
   async createRevenueCategory(insertCategory: InsertRevenueCategory): Promise<RevenueCategory> {
     const id = randomUUID();
-    const category: RevenueCategory = { ...insertCategory, id };
+    const category: RevenueCategory = { 
+      ...insertCategory,
+      isActive: insertCategory.isActive ?? 1,
+      id 
+    };
     this.revenueCategories.set(id, category);
     return category;
   }
@@ -602,7 +611,8 @@ export class MemStorage implements IStorage {
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
     const invoice: Invoice = { 
-      ...insertInvoice, 
+      ...insertInvoice,
+      description: insertInvoice.description ?? null,
       id,
       createdAt: new Date()
     };
@@ -680,6 +690,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const registration: BusinessRegistration = {
       ...insertRegistration,
+      taxId: insertRegistration.taxId ?? null,
       id,
       submittedAt: new Date(),
       reviewedAt: null,
@@ -731,6 +742,9 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const config: PaymentConfiguration = {
       ...insertConfig,
+      categoryId: insertConfig.categoryId ?? null,
+      isEnabled: insertConfig.isEnabled ?? 1,
+      updatedBy: insertConfig.updatedBy ?? null,
       id,
       updatedAt: new Date(),
     };
@@ -775,8 +789,14 @@ export class MemStorage implements IStorage {
       .map(config => config.paymentMethod);
 
     // Return unique methods
-    return [...new Set(enabledMethods)];
+    return Array.from(new Set(enabledMethods));
   }
 }
 
-export const storage = new MemStorage();
+// Initialize storage based on environment
+import { db } from './db';
+import { PostgresStorage } from './pg-storage';
+
+export const storage: IStorage = db 
+  ? new PostgresStorage(db)
+  : new MemStorage();

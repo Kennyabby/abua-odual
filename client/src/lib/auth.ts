@@ -1,10 +1,13 @@
 import { User } from "@shared/schema";
 
+// Demo users for login dropdown (passwords are NOT used here - actual auth via API)
+// Passwords are bcrypt hashed in the backend database
+// For demo/testing credentials, see server/seed.ts or DEPLOYMENT.md
 export const MOCK_USERS: User[] = [
   {
     id: "1",
     username: "citizen1",
-    password: "password123",
+    password: "", // Hashed in backend - not used client-side
     fullName: "John Okafor",
     email: "john.okafor@email.com",
     phone: "+234 803 123 4567",
@@ -13,7 +16,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "2",
     username: "admin1",
-    password: "admin123",
+    password: "", // Hashed in backend - not used client-side
     fullName: "Ada Nwosu",
     email: "ada.nwosu@abuaodual.gov.ng",
     phone: "+234 805 987 6543",
@@ -22,7 +25,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "3",
     username: "finance1",
-    password: "finance123",
+    password: "", // Hashed in backend - not used client-side
     fullName: "Emeka Eze",
     email: "emeka.eze@abuaodual.gov.ng",
     phone: "+234 807 234 5678",
@@ -31,7 +34,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "4",
     username: "auditor1",
-    password: "auditor123",
+    password: "", // Hashed in backend - not used client-side
     fullName: "Ngozi Obi",
     email: "ngozi.obi@abuaodual.gov.ng",
     phone: "+234 809 876 5432",
