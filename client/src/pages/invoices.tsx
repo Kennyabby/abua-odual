@@ -1,9 +1,25 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -12,20 +28,86 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Eye, Download } from "lucide-react";
+import { Plus, Search, Eye, Download, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { insertInvoiceSchema, type InsertInvoice } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const { toast } = useToast();
   
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["/api/invoices"],
+  });
+
+  const { data: taxpayers } = useQuery({
+    queryKey: ["/api/taxpayers"],
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ["/api/revenue-categories"],
   });
 
   const filteredInvoices = invoices?.filter((inv: any) =>
     inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     inv.taxpayerName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const form = useForm<InsertInvoice>({
+    resolver: zodResolver(insertInvoiceSchema),
+    defaultValues: {
+      invoiceNumber: "",
+      taxpayerId: "",
+      categoryId: "",
+      amount: "0",
+      status: "pending",
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      description: "",
+    },
+  });
+
+  const selectedCategoryId = form.watch("categoryId");
+  const selectedCategory = categories?.find((c: any) => c.id === selectedCategoryId);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertInvoice) => {
+      const res = await apiRequest("POST", "/api/invoices", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({
+        title: "Success",
+        description: "Invoice generated successfully",
+      });
+      setShowDialog(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: InsertInvoice) => {
+    createMutation.mutate(data);
+  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -61,7 +143,7 @@ export default function Invoices() {
             Manage and track all generated invoices
           </p>
         </div>
-        <Button data-testid="button-generate-invoice">
+        <Button onClick={() => setShowDialog(true)} data-testid="button-generate-invoice">
           <Plus className="h-4 w-4 mr-2" />
           Generate Invoice
         </Button>
@@ -142,6 +224,171 @@ export default function Invoices() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Generate New Invoice</DialogTitle>
+            <DialogDescription>
+              Create a new invoice for a taxpayer
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="invoiceNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Invoice Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="INV-2024-0001" {...field} data-testid="input-invoice-number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => {
+                    const dateValue = field.value instanceof Date && !isNaN(field.value.getTime())
+                      ? format(field.value, "yyyy-MM-dd")
+                      : "";
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={dateValue}
+                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            data-testid="input-due-date"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="taxpayerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Taxpayer</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-taxpayer">
+                          <SelectValue placeholder="Select taxpayer" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {taxpayers?.map((taxpayer: any) => (
+                          <SelectItem key={taxpayer.id} value={taxpayer.id}>
+                            {taxpayer.fullName} ({taxpayer.taxpayerId})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Revenue Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-category">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories?.map((category: any) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name} - ₦{parseFloat(category.amount).toLocaleString()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {selectedCategory && (
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Category Amount:</span>
+                    <span className="text-lg font-bold">₦{parseFloat(selectedCategory.amount).toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This amount will be used for the invoice
+                  </p>
+                </div>
+              )}
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount (₦)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0.00" 
+                        {...field}
+                        value={selectedCategory ? selectedCategory.amount : field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        data-testid="input-amount"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Additional invoice details..." 
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDialog(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
+                  {createMutation.isPending ? "Generating..." : "Generate Invoice"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

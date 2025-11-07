@@ -13,7 +13,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "2",
     username: "admin1",
-    password: "password123",
+    password: "admin123",
     fullName: "Ada Nwosu",
     email: "ada.nwosu@abuaodual.gov.ng",
     phone: "+234 805 987 6543",
@@ -22,7 +22,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "3",
     username: "finance1",
-    password: "password123",
+    password: "finance123",
     fullName: "Emeka Eze",
     email: "emeka.eze@abuaodual.gov.ng",
     phone: "+234 807 234 5678",
@@ -31,7 +31,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "4",
     username: "auditor1",
-    password: "password123",
+    password: "auditor123",
     fullName: "Ngozi Obi",
     email: "ngozi.obi@abuaodual.gov.ng",
     phone: "+234 809 876 5432",

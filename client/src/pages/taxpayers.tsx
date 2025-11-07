@@ -1,9 +1,24 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -13,9 +28,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Search, Eye, User, Building2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { insertTaxpayerSchema, type InsertTaxpayer } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export default function Taxpayers() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const { toast } = useToast();
   
   const { data: taxpayers, isLoading } = useQuery({
     queryKey: ["/api/taxpayers"],
@@ -26,6 +56,50 @@ export default function Taxpayers() {
     taxpayer.taxpayerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     taxpayer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const form = useForm<InsertTaxpayer>({
+    resolver: zodResolver(insertTaxpayerSchema),
+    defaultValues: {
+      taxpayerId: "",
+      type: "individual",
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      businessName: "",
+      businessType: "",
+      registrationNumber: "",
+    },
+  });
+
+  const taxpayerType = form.watch("type");
+
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertTaxpayer) => {
+      const res = await apiRequest("POST", "/api/taxpayers", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/taxpayers"] });
+      toast({
+        title: "Success",
+        description: "Taxpayer created successfully",
+      });
+      setShowDialog(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create taxpayer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: InsertTaxpayer) => {
+    createMutation.mutate(data);
+  };
 
   if (isLoading) {
     return (
@@ -48,7 +122,7 @@ export default function Taxpayers() {
             Manage taxpayer profiles and information
           </p>
         </div>
-        <Button data-testid="button-add-taxpayer">
+        <Button onClick={() => setShowDialog(true)} data-testid="button-add-taxpayer">
           <Plus className="h-4 w-4 mr-2" />
           Add Taxpayer
         </Button>
@@ -138,6 +212,169 @@ export default function Taxpayers() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Taxpayer</DialogTitle>
+            <DialogDescription>
+              Create a new taxpayer profile in the system
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="taxpayerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Taxpayer ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ABU-IND-2024-0001" {...field} data-testid="input-taxpayer-id" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-type">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="individual">Individual</SelectItem>
+                          <SelectItem value="business">Business</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} data-testid="input-full-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+234 801 234 5678" {...field} data-testid="input-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main Street, City" {...field} data-testid="input-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {taxpayerType === "business" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company Name Ltd" {...field} data-testid="input-business-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="businessType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Retail" {...field} data-testid="input-business-type" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="registrationNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Registration Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="RC123456" {...field} data-testid="input-registration-number" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDialog(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
+                  {createMutation.isPending ? "Creating..." : "Create Taxpayer"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
