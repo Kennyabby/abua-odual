@@ -81,7 +81,7 @@ export default function Login() {
   const selectedUser = MOCK_USERS.find(u => u.id === selectedUserId);
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="w-full px-4 py-4 min-h-screen grid lg:grid-cols-2">
       {/* Left Panel - Branding & Info (hidden on mobile) */}
       <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground">
         <div>

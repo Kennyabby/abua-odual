@@ -36,10 +36,10 @@ async function seed() {
 
   // Generate random passwords for demo accounts
   const passwords = {
-    citizen1: generatePassword(),
-    admin1: generatePassword(),
-    finance1: generatePassword(),
-    auditor1: generatePassword(),
+    citizen1: "password123", // For easier testing
+    admin1: "password123",
+    finance1: "password123",
+    auditor1: "password123",
   };
 
   // Hash all passwords

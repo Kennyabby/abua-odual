@@ -92,7 +92,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="w-full px-4 py-4 min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">

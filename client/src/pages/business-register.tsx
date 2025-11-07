@@ -76,7 +76,7 @@ export default function BusinessRegister() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4">
+      <div className="w-full px-4 py-4 min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-950 mx-auto mb-4">

@@ -103,7 +103,7 @@ export class MemStorage implements IStorage {
       {
         id: "1",
         username: "citizen1",
-        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
+        password: "password123",
         fullName: "John Okafor",
         email: "john.okafor@email.com",
         phone: "+234 803 123 4567",
@@ -112,7 +112,7 @@ export class MemStorage implements IStorage {
       {
         id: "2",
         username: "admin1",
-        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
+        password: "password123",
         fullName: "Ada Nwosu",
         email: "ada.nwosu@abuaodual.gov.ng",
         phone: "+234 805 987 6543",
@@ -121,7 +121,7 @@ export class MemStorage implements IStorage {
       {
         id: "3",
         username: "finance1",
-        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
+        password: "password123",
         fullName: "Emeka Eze",
         email: "emeka.eze@abuaodual.gov.ng",
         phone: "+234 807 234 5678",
@@ -130,7 +130,7 @@ export class MemStorage implements IStorage {
       {
         id: "4",
         username: "auditor1",
-        password: "$2b$10$xB4DkVxJ7YF.IqN8QLqJeOYWNW6v8mZx5YnJQ7YDYO3EkFJ8P3Gfe",
+        password: "password123",
         fullName: "Ngozi Obi",
         email: "ngozi.obi@abuaodual.gov.ng",
         phone: "+234 809 876 5432",
