@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ export default function PaymentFlow() {
   
   const [step, setStep] = useState<PaymentStep>("category");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentData, setPaymentData] = useState({
     payerName: "",
     payerEmail: "",
@@ -41,6 +41,22 @@ export default function PaymentFlow() {
   const { data: categories } = useQuery({
     queryKey: ["/api/revenue-categories"],
   });
+
+  const { data: enabledMethodsResponse } = useQuery({
+    queryKey: ["/api/payment-methods", selectedCategory],
+    enabled: !!selectedCategory,
+  });
+
+  const enabledPaymentMethods = enabledMethodsResponse?.methods || [];
+
+  // Set first enabled method as default when enabled methods change
+  useEffect(() => {
+    if (enabledPaymentMethods.length > 0 && !enabledPaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(enabledPaymentMethods[0]);
+    } else if (enabledPaymentMethods.length === 0) {
+      setPaymentMethod("");
+    }
+  }, [enabledPaymentMethods, paymentMethod]);
 
   const processMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -111,7 +127,7 @@ export default function PaymentFlow() {
     });
   };
 
-  const paymentMethods = [
+  const allPaymentMethods = [
     {
       id: "card",
       name: "Card Payment",
@@ -137,6 +153,11 @@ export default function PaymentFlow() {
       icon: Smartphone,
     },
   ];
+
+  // Filter payment methods based on what's enabled
+  const paymentMethods = allPaymentMethods.filter(method => 
+    enabledPaymentMethods.includes(method.id)
+  );
 
   if (step === "processing") {
     return (
@@ -338,30 +359,44 @@ export default function PaymentFlow() {
               <CardDescription>Choose how you want to pay</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {paymentMethods.map((method) => (
-                    <label
-                      key={method.id}
-                      className="flex items-center gap-3 p-4 border rounded-md hover-elevate cursor-pointer"
-                      data-testid={`radio-method-${method.id}`}
-                    >
-                      <RadioGroupItem value={method.id} id={method.id} />
-                      <method.icon className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{method.name}</div>
-                        <div className="text-xs text-muted-foreground">{method.description}</div>
-                      </div>
-                    </label>
-                  ))}
+              {paymentMethods.length === 0 ? (
+                <div className="p-6 text-center border rounded-md bg-muted/30">
+                  <p className="text-sm font-medium mb-2">No Payment Methods Available</p>
+                  <p className="text-xs text-muted-foreground">
+                    Payment methods for this category have not been configured yet. Please contact support or try a different payment category.
+                  </p>
                 </div>
-              </RadioGroup>
+              ) : (
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {paymentMethods.map((method) => (
+                      <label
+                        key={method.id}
+                        className="flex items-center gap-3 p-4 border rounded-md hover-elevate cursor-pointer"
+                        data-testid={`radio-method-${method.id}`}
+                      >
+                        <RadioGroupItem value={method.id} id={method.id} />
+                        <method.icon className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{method.name}</div>
+                          <div className="text-xs text-muted-foreground">{method.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              )}
 
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setStep("details")} className="flex-1">
                   Back
                 </Button>
-                <Button onClick={handleContinueToPayment} className="flex-1" data-testid="button-continue-payment">
+                <Button 
+                  onClick={handleContinueToPayment} 
+                  className="flex-1" 
+                  disabled={!paymentMethod || paymentMethods.length === 0}
+                  data-testid="button-continue-payment"
+                >
                   Continue
                 </Button>
               </div>

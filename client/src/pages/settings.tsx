@@ -1,13 +1,84 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { PaymentConfiguration } from "@shared/schema";
 
 export default function Settings() {
   const currentUser = getCurrentUser();
+  const { toast } = useToast();
+
+  const { data: paymentConfigs, isLoading } = useQuery<PaymentConfiguration[]>({
+    queryKey: ["/api/admin/payment-configurations"],
+  });
+
+  const [paymentMethods, setPaymentMethods] = useState({
+    card: false,
+    bank_transfer: false,
+    ussd: false,
+    mobile_money: false,
+  });
+
+  useEffect(() => {
+    if (paymentConfigs) {
+      const methods = {
+        card: paymentConfigs.some(c => c.paymentMethod === "card" && c.isEnabled === 1),
+        bank_transfer: paymentConfigs.some(c => c.paymentMethod === "bank_transfer" && c.isEnabled === 1),
+        ussd: paymentConfigs.some(c => c.paymentMethod === "ussd" && c.isEnabled === 1),
+        mobile_money: paymentConfigs.some(c => c.paymentMethod === "mobile_money" && c.isEnabled === 1),
+      };
+      setPaymentMethods(methods);
+    }
+  }, [paymentConfigs]);
+
+  const updatePaymentMethod = useMutation({
+    mutationFn: async ({ method, enabled }: { method: string; enabled: boolean }) => {
+      const config = paymentConfigs?.find(c => c.paymentMethod === method);
+      
+      if (config) {
+        const res = await apiRequest("PUT", `/api/admin/payment-configurations/${config.id}`, {
+          isEnabled: enabled ? 1 : 0,
+          updatedBy: currentUser?.id,
+        });
+        return await res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/admin/payment-configurations", {
+          categoryId: null,
+          paymentMethod: method,
+          isEnabled: enabled ? 1 : 0,
+          updatedBy: currentUser?.id,
+        });
+        return await res.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-configurations"] });
+      toast({
+        title: "Payment Method Updated",
+        description: "Payment configuration has been saved successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Could not update payment configuration. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePaymentToggle = (method: keyof typeof paymentMethods, enabled: boolean) => {
+    setPaymentMethods(prev => ({ ...prev, [method]: enabled }));
+    updatePaymentMethod.mutate({ method, enabled });
+  };
 
   return (
     <div className="p-8 space-y-6">
@@ -114,39 +185,76 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Card Payments</Label>
-                <p className="text-sm text-muted-foreground">
-                  Accept debit and credit card payments
-                </p>
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
-              <Switch defaultChecked data-testid="switch-card" />
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Card Payments</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Accept debit and credit card payments
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={paymentMethods.card}
+                    onCheckedChange={(checked) => handlePaymentToggle("card", checked)}
+                    data-testid="switch-card" 
+                  />
+                </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Bank Transfer</Label>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Bank Transfer</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Accept direct bank transfer payments
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={paymentMethods.bank_transfer}
+                    onCheckedChange={(checked) => handlePaymentToggle("bank_transfer", checked)}
+                    data-testid="switch-bank" 
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable USSD</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Accept payments via USSD codes
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={paymentMethods.ussd}
+                    onCheckedChange={(checked) => handlePaymentToggle("ussd", checked)}
+                    data-testid="switch-ussd" 
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Mobile Money</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Accept mobile money payments
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={paymentMethods.mobile_money}
+                    onCheckedChange={(checked) => handlePaymentToggle("mobile_money", checked)}
+                    data-testid="switch-mobile" 
+                  />
+                </div>
+
                 <p className="text-sm text-muted-foreground">
-                  Accept direct bank transfer payments
+                  Changes are saved automatically when you toggle each payment method.
                 </p>
-              </div>
-              <Switch defaultChecked data-testid="switch-bank" />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable USSD</Label>
-                <p className="text-sm text-muted-foreground">
-                  Accept payments via USSD codes
-                </p>
-              </div>
-              <Switch data-testid="switch-ussd" />
-            </div>
-
-            <Button className="w-full" data-testid="button-save-payment">
-              Save Payment Settings
-            </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 

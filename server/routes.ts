@@ -8,6 +8,9 @@ import {
   insertInvoiceSchema,
   insertPaymentSchema,
   updateInvoiceStatusSchema,
+  insertBusinessRegistrationSchema,
+  updateBusinessRegistrationStatusSchema,
+  insertPaymentConfigurationSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -507,6 +510,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       successRate,
       breakdown: breakdown.slice(0, 10),
     });
+  });
+
+  // Business Registrations (Public POST, Admin GET/PUT/DELETE)
+  app.post("/api/business/register", async (req, res) => {
+    try {
+      const validatedData = insertBusinessRegistrationSchema.parse(req.body);
+      const existing = await storage.getBusinessRegistrationByNumber(validatedData.registrationNumber);
+      
+      if (existing) {
+        return res.status(400).json({ error: "Registration number already exists" });
+      }
+
+      const registration = await storage.createBusinessRegistration(validatedData);
+      res.status(201).json(registration);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/business-registrations", async (req, res) => {
+    const registrations = await storage.getAllBusinessRegistrations();
+    res.json(registrations);
+  });
+
+  app.get("/api/admin/business-registrations/:id", async (req, res) => {
+    const registration = await storage.getBusinessRegistration(req.params.id);
+    if (!registration) {
+      return res.status(404).json({ error: "Registration not found" });
+    }
+    res.json(registration);
+  });
+
+  app.put("/api/admin/business-registrations/:id/status", async (req, res) => {
+    try {
+      const validatedData = updateBusinessRegistrationStatusSchema.parse(req.body);
+      const registration = await storage.updateBusinessRegistrationStatus(
+        req.params.id,
+        validatedData.status,
+        validatedData.rejectionReason,
+        req.body.reviewedBy
+      );
+      
+      if (!registration) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+      
+      res.json(registration);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/business-registrations/:id", async (req, res) => {
+    const deleted = await storage.deleteBusinessRegistration(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Registration not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Payment Configurations (Admin only)
+  app.get("/api/admin/payment-configurations", async (req, res) => {
+    const configs = await storage.getAllPaymentConfigurations();
+    res.json(configs);
+  });
+
+  app.get("/api/payment-methods", async (req, res) => {
+    const categoryId = req.query.categoryId as string | undefined;
+    const enabledMethods = await storage.getEnabledPaymentMethods(categoryId);
+    res.json({ methods: enabledMethods });
+  });
+
+  app.post("/api/admin/payment-configurations", async (req, res) => {
+    try {
+      const validatedData = insertPaymentConfigurationSchema.parse(req.body);
+      const config = await storage.createPaymentConfiguration(validatedData);
+      res.status(201).json(config);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/payment-configurations/:id", async (req, res) => {
+    try {
+      const validatedData = insertPaymentConfigurationSchema.partial().parse(req.body);
+      const config = await storage.updatePaymentConfiguration(req.params.id, validatedData);
+      
+      if (!config) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      
+      res.json(config);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/payment-configurations/:id", async (req, res) => {
+    const deleted = await storage.deletePaymentConfiguration(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Configuration not found" });
+    }
+    res.status(204).send();
   });
 
   const httpServer = createServer(app);

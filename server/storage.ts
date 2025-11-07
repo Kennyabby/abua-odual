@@ -8,7 +8,11 @@ import {
   type Invoice,
   type InsertInvoice,
   type Payment,
-  type InsertPayment
+  type InsertPayment,
+  type BusinessRegistration,
+  type InsertBusinessRegistration,
+  type PaymentConfiguration,
+  type InsertPaymentConfiguration
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -51,6 +55,23 @@ export interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, updates: Partial<InsertPayment>): Promise<Payment | undefined>;
   deletePayment(id: string): Promise<boolean>;
+
+  // Business Registrations
+  getBusinessRegistration(id: string): Promise<BusinessRegistration | undefined>;
+  getBusinessRegistrationByNumber(registrationNumber: string): Promise<BusinessRegistration | undefined>;
+  getAllBusinessRegistrations(): Promise<BusinessRegistration[]>;
+  createBusinessRegistration(registration: InsertBusinessRegistration): Promise<BusinessRegistration>;
+  updateBusinessRegistrationStatus(id: string, status: string, rejectionReason?: string, reviewedBy?: string): Promise<BusinessRegistration | undefined>;
+  deleteBusinessRegistration(id: string): Promise<boolean>;
+
+  // Payment Configurations
+  getPaymentConfiguration(id: string): Promise<PaymentConfiguration | undefined>;
+  getAllPaymentConfigurations(): Promise<PaymentConfiguration[]>;
+  getPaymentConfigurationsByCategory(categoryId: string | null): Promise<PaymentConfiguration[]>;
+  createPaymentConfiguration(config: InsertPaymentConfiguration): Promise<PaymentConfiguration>;
+  updatePaymentConfiguration(id: string, updates: Partial<InsertPaymentConfiguration>): Promise<PaymentConfiguration | undefined>;
+  deletePaymentConfiguration(id: string): Promise<boolean>;
+  getEnabledPaymentMethods(categoryId?: string): Promise<string[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -59,6 +80,8 @@ export class MemStorage implements IStorage {
   private revenueCategories: Map<string, RevenueCategory>;
   private invoices: Map<string, Invoice>;
   private payments: Map<string, Payment>;
+  private businessRegistrations: Map<string, BusinessRegistration>;
+  private paymentConfigurations: Map<string, PaymentConfiguration>;
 
   constructor() {
     this.users = new Map();
@@ -66,6 +89,8 @@ export class MemStorage implements IStorage {
     this.revenueCategories = new Map();
     this.invoices = new Map();
     this.payments = new Map();
+    this.businessRegistrations = new Map();
+    this.paymentConfigurations = new Map();
     
     this.seedMockData();
   }
@@ -359,6 +384,104 @@ export class MemStorage implements IStorage {
     ];
 
     mockPayments.forEach(pay => this.payments.set(pay.id, pay));
+
+    // Seed business registrations
+    const mockBusinessRegistrations: BusinessRegistration[] = [
+      {
+        id: "br1",
+        businessName: "Swift Logistics Limited",
+        businessType: "limited_liability",
+        registrationNumber: "RC123456",
+        taxId: "TIN-2024-001",
+        address: "Plot 45, Industrial Layout",
+        city: "Abua",
+        state: "Rivers",
+        contactPerson: "Olu Williams",
+        contactEmail: "contact@swiftlogistics.ng",
+        contactPhone: "+234 807 444 5555",
+        status: "approved",
+        rejectionReason: null,
+        submittedAt: new Date("2024-01-15T10:00:00"),
+        reviewedAt: new Date("2024-01-16T14:30:00"),
+        reviewedBy: "2",
+      },
+      {
+        id: "br2",
+        businessName: "Udo Stores Enterprises",
+        businessType: "sole_proprietorship",
+        registrationNumber: "BN789012",
+        taxId: "TIN-2024-002",
+        address: "23 Market Road",
+        city: "Odual",
+        state: "Rivers",
+        contactPerson: "Blessing Udo",
+        contactEmail: "info@udostores.com",
+        contactPhone: "+234 803 222 3333",
+        status: "approved",
+        rejectionReason: null,
+        submittedAt: new Date("2024-01-20T09:30:00"),
+        reviewedAt: new Date("2024-01-21T11:00:00"),
+        reviewedBy: "2",
+      },
+      {
+        id: "br3",
+        businessName: "Fresh Farms Nigeria",
+        businessType: "partnership",
+        registrationNumber: "BN345678",
+        taxId: null,
+        address: "Farm Settlement Area",
+        city: "Abua",
+        state: "Rivers",
+        contactPerson: "Emmanuel Okoro",
+        contactEmail: "info@freshfarms.ng",
+        contactPhone: "+234 809 555 6666",
+        status: "pending",
+        rejectionReason: null,
+        submittedAt: new Date("2024-02-25T15:20:00"),
+        reviewedAt: null,
+        reviewedBy: null,
+      },
+    ];
+
+    mockBusinessRegistrations.forEach(reg => this.businessRegistrations.set(reg.id, reg));
+
+    // Seed payment configurations (global - applies to all categories)
+    const mockPaymentConfigs: PaymentConfiguration[] = [
+      {
+        id: "pc1",
+        categoryId: null,
+        paymentMethod: "card",
+        isEnabled: 1,
+        updatedAt: new Date("2024-01-10T00:00:00"),
+        updatedBy: "2",
+      },
+      {
+        id: "pc2",
+        categoryId: null,
+        paymentMethod: "bank_transfer",
+        isEnabled: 1,
+        updatedAt: new Date("2024-01-10T00:00:00"),
+        updatedBy: "2",
+      },
+      {
+        id: "pc3",
+        categoryId: null,
+        paymentMethod: "ussd",
+        isEnabled: 1,
+        updatedAt: new Date("2024-01-10T00:00:00"),
+        updatedBy: "2",
+      },
+      {
+        id: "pc4",
+        categoryId: null,
+        paymentMethod: "mobile_money",
+        isEnabled: 1,
+        updatedAt: new Date("2024-01-10T00:00:00"),
+        updatedBy: "2",
+      },
+    ];
+
+    mockPaymentConfigs.forEach(config => this.paymentConfigurations.set(config.id, config));
   }
 
   // User methods
@@ -536,6 +659,123 @@ export class MemStorage implements IStorage {
 
   async deletePayment(id: string): Promise<boolean> {
     return this.payments.delete(id);
+  }
+
+  // Business Registration methods
+  async getBusinessRegistration(id: string): Promise<BusinessRegistration | undefined> {
+    return this.businessRegistrations.get(id);
+  }
+
+  async getBusinessRegistrationByNumber(registrationNumber: string): Promise<BusinessRegistration | undefined> {
+    return Array.from(this.businessRegistrations.values()).find(
+      reg => reg.registrationNumber === registrationNumber
+    );
+  }
+
+  async getAllBusinessRegistrations(): Promise<BusinessRegistration[]> {
+    return Array.from(this.businessRegistrations.values());
+  }
+
+  async createBusinessRegistration(insertRegistration: InsertBusinessRegistration): Promise<BusinessRegistration> {
+    const id = randomUUID();
+    const registration: BusinessRegistration = {
+      ...insertRegistration,
+      id,
+      submittedAt: new Date(),
+      reviewedAt: null,
+      status: "pending",
+      rejectionReason: null,
+      reviewedBy: null,
+    };
+    this.businessRegistrations.set(id, registration);
+    return registration;
+  }
+
+  async updateBusinessRegistrationStatus(
+    id: string,
+    status: string,
+    rejectionReason?: string,
+    reviewedBy?: string
+  ): Promise<BusinessRegistration | undefined> {
+    const registration = this.businessRegistrations.get(id);
+    if (registration) {
+      registration.status = status;
+      registration.reviewedAt = new Date();
+      registration.rejectionReason = rejectionReason || null;
+      registration.reviewedBy = reviewedBy || null;
+      this.businessRegistrations.set(id, registration);
+    }
+    return registration;
+  }
+
+  async deleteBusinessRegistration(id: string): Promise<boolean> {
+    return this.businessRegistrations.delete(id);
+  }
+
+  // Payment Configuration methods
+  async getPaymentConfiguration(id: string): Promise<PaymentConfiguration | undefined> {
+    return this.paymentConfigurations.get(id);
+  }
+
+  async getAllPaymentConfigurations(): Promise<PaymentConfiguration[]> {
+    return Array.from(this.paymentConfigurations.values());
+  }
+
+  async getPaymentConfigurationsByCategory(categoryId: string | null): Promise<PaymentConfiguration[]> {
+    return Array.from(this.paymentConfigurations.values()).filter(
+      config => config.categoryId === categoryId
+    );
+  }
+
+  async createPaymentConfiguration(insertConfig: InsertPaymentConfiguration): Promise<PaymentConfiguration> {
+    const id = randomUUID();
+    const config: PaymentConfiguration = {
+      ...insertConfig,
+      id,
+      updatedAt: new Date(),
+    };
+    this.paymentConfigurations.set(id, config);
+    return config;
+  }
+
+  async updatePaymentConfiguration(
+    id: string,
+    updates: Partial<InsertPaymentConfiguration>
+  ): Promise<PaymentConfiguration | undefined> {
+    const config = this.paymentConfigurations.get(id);
+    if (config) {
+      const updated = {
+        ...config,
+        ...updates,
+        updatedAt: new Date(),
+      };
+      this.paymentConfigurations.set(id, updated);
+      return updated;
+    }
+    return undefined;
+  }
+
+  async deletePaymentConfiguration(id: string): Promise<boolean> {
+    return this.paymentConfigurations.delete(id);
+  }
+
+  async getEnabledPaymentMethods(categoryId?: string): Promise<string[]> {
+    const configs = await this.getAllPaymentConfigurations();
+    
+    // Get category-specific configs first, then global configs
+    const relevantConfigs = configs.filter(config => {
+      if (categoryId && config.categoryId === categoryId) return true;
+      if (!categoryId && !config.categoryId) return true;
+      if (!config.categoryId) return true; // Global config applies to all
+      return false;
+    });
+
+    const enabledMethods = relevantConfigs
+      .filter(config => config.isEnabled === 1)
+      .map(config => config.paymentMethod);
+
+    // Return unique methods
+    return [...new Set(enabledMethods)];
   }
 }
 

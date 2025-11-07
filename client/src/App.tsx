@@ -11,6 +11,8 @@ import { getCurrentUser } from "@/lib/auth";
 
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
+import Landing from "@/pages/landing";
+import BusinessRegister from "@/pages/business-register";
 import CitizenPortal from "@/pages/citizen-portal";
 import Dashboard from "@/pages/dashboard";
 import RevenueSources from "@/pages/revenue-sources";
@@ -42,7 +44,7 @@ function Router() {
   const [location] = useLocation();
   const currentUser = getCurrentUser();
 
-  const publicRoutes = ["/", "/verify"];
+  const publicRoutes = ["/", "/login", "/verify", "/business/register"];
   const isPublicRoute = publicRoutes.includes(location);
 
   if (!currentUser && !isPublicRoute) {
@@ -95,8 +97,10 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Login} />
+      <Route path="/" component={Landing} />
+      <Route path="/login" component={Login} />
       <Route path="/verify" component={Verify} />
+      <Route path="/business/register" component={BusinessRegister} />
       <Route path="/citizen">
         <ProtectedRoute allowedRoles={["citizen"]}>
           <CitizenPortal />
