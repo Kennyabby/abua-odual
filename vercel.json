@@ -1,17 +1,16 @@
 {
+  "regions": ["cdg1"],
+  "functions": {
+    "api/**/*": {
+      "includeFiles": "{server/**,dist/**}",
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/dist/index.js"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index?path=$1" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
